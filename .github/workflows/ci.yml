@@ -1,0 +1,93 @@
+name: Production CI Pipeline
+
+on:
+    push:
+        branches: ["main"]
+    pull_request:
+        branches: ["main"]
+
+jobs:
+    # Job 1: Code formatting check (prettier)
+    format-check:
+        name: Check Code Formatting
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+            
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                node-version: 20.x
+                cache: 'npm'
+            
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Verify Prettier Formatting
+              run: npm run format:check
+    
+    # Job 2: Code Linting (ESLint)
+    lint:
+        name: Run ESLint
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+            
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                node-version: 20.x
+                cache: 'npm'
+            
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Run Linter
+              run: npm run lint
+
+    # Job 3: Type Checking (TypeScript Compiler)
+    typecheck:
+        name: TypeScript Type Check
+        runs-on: ubuntu-latest
+        steps: 
+            - name: Checkout Code
+              uses: actions/checkout@v4
+            
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                node-version: 20.x
+                cache: 'npm'
+            
+            - name: Install Dependencies
+              run: npm ci
+            
+            - name: Type Check
+              run: npm run tsc -- --noEmit
+
+    # Job 4: Next.js Production Build Validation
+    build:
+        name: Next.js Build
+        needs: [format-check, lint, typecheck] # Only builds if formatting, lintings and typecheck are 100% clean
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                node-version: 20.x
+                cache: 'npm'
+
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Build Next.js Application
+              run: npm run build
+              env:
+                NEXT_TELEMETRY_DISABLED: 1
+                DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"
+                REDIS_URL: "redis://localhost:6379"
